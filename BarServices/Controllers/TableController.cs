@@ -1,33 +1,37 @@
 ﻿using AutoMapper;
 using BarServices.DTOs;
 using BarServices.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace BarServices.Controllers
 {
     [Route("api/table")]
     [ApiController]
-    public class TableController : ControllerBase
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN,DEPENDENT")]
+    public class TableController : CustomBaseController
     {
         private readonly ApplicationDBContext context;
         private readonly IMapper mapper;
 
-        public TableController(ApplicationDBContext context, IMapper mapper)
+        public TableController(ApplicationDBContext context, IMapper mapper) : base(context, mapper)
         {
             this.context = context;
             this.mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Table>>> Get()
+        public async Task<ActionResult<List<TableDTO>>> Get()
         {
-            return await context.Tables.Include(t => t.Bar).Include(t => t.Kitchen).ToListAsync();
+            return await Get<Table, TableDTO>();
         }
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<TableDTO>> Get(int id)
+        public async Task<ActionResult<TableDTOWithProducts>> Get(int id)
         {
             var table = await context.Tables
                 .Include(t => t.Products)
@@ -40,10 +44,11 @@ namespace BarServices.Controllers
                 return NotFound();
             }
 
-            return mapper.Map<TableDTO>(table);
+            return mapper.Map<TableDTOWithProducts>(table);
         }
 
         [HttpGet("{id:int}/check")]
+        [AllowAnonymous]
         public async Task<ActionResult<decimal>> GetCheck(int id)
         {
             var orders = await context.Tables.Where(t => t.Id == id)
@@ -86,9 +91,9 @@ namespace BarServices.Controllers
         [HttpPut("{id:int}")]
         public async Task<ActionResult> Put(int id, TableUpdateDTO tableUpdateDTO)
         {
-            var table = mapper.Map<Table>(tableUpdateDTO);
-            table.Id = id;
-            context.Update(table);
+            var table = await context.Tables.FirstOrDefaultAsync(t => t.Id == id);
+            if (table is null) { return NotFound(); }
+            table = mapper.Map(tableUpdateDTO, table);
             await context.SaveChangesAsync();
             return Ok();
         }

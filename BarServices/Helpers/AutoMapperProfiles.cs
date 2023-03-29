@@ -8,9 +8,6 @@ namespace BarServices.Helpers
     {
         public AutoMapperProfiles() 
         {
-            CreateMap<UserCreationDTO, User>().ReverseMap();
-            CreateMap<UserUpdateDTO, User>();
-            
             CreateMap<ElaborationCreationDTO, Elaboration>();
             CreateMap<Elaboration, ElaborationDTO>();
             CreateMap<Elaboration, ElaborationDTOWithProducts>()
@@ -24,7 +21,8 @@ namespace BarServices.Helpers
                 .ForMember(t => t.Bar, dto => dto.MapFrom(field => new Elaboration { Id = field.BarId }))
                 .ForMember(t => t.Kitchen, dto => dto.MapFrom(field => new Elaboration { Id = field.KitchenId }));
             CreateMap<TableUpdateDTO, Table>();
-            CreateMap<Table, TableDTO>()
+            CreateMap<Table, TableDTO>();
+            CreateMap<Table, TableDTOWithProducts>()
                 .ForMember(dto => dto.Products, t => t.MapFrom(MapTableDTOProducts))
                 .ForMember(dto => dto.Bar, t => t.MapFrom(MapTableDTOBar))
                 .ForMember(dto => dto.Kitchen, t => t.MapFrom(MapTableDTOKitchen));
@@ -50,7 +48,7 @@ namespace BarServices.Helpers
             return products;
         }
 
-        private List<ProductDTO> MapTableDTOProducts(Table table, TableDTO tableDTO)
+        private List<ProductDTO> MapTableDTOProducts(Table table, TableDTOWithProducts tableDTO)
         {
             var products = new List<ProductDTO>();
             if (table.Products is null) { return products; }
@@ -69,12 +67,12 @@ namespace BarServices.Helpers
             return products;
         }
 
-        private ElaborationDTO MapTableDTOBar(Table table, TableDTO tableDTO)
+        private ElaborationDTO MapTableDTOBar(Table table, TableDTOWithProducts tableDTO)
         {
             return new ElaborationDTO() { Id = table.Bar.Id, Name = table.Bar.Name, };
         }
 
-        private ElaborationDTO MapTableDTOKitchen(Table table, TableDTO tableDTO)
+        private ElaborationDTO MapTableDTOKitchen(Table table, TableDTOWithProducts tableDTO)
         {
             return new ElaborationDTO() { Id = table.Kitchen.Id, Name = table.Kitchen.Name, };
         }

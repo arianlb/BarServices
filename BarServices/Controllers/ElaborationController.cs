@@ -2,20 +2,25 @@
 using AutoMapper.QueryableExtensions;
 using BarServices.DTOs;
 using BarServices.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace BarServices.Controllers
 {
     [Route("api/elaboration")]
     [ApiController]
-    public class ElaborationController : ControllerBase
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN")]
+    public class ElaborationController : CustomBaseController
     {
         private readonly ApplicationDBContext context;
         private readonly IMapper mapper;
 
-        public ElaborationController(ApplicationDBContext context, IMapper mapper)
+        public ElaborationController(ApplicationDBContext context, IMapper mapper) 
+            : base(context, mapper)
         {
             this.context = context;
             this.mapper = mapper;
@@ -24,9 +29,7 @@ namespace BarServices.Controllers
         [HttpGet]
         public async Task<ActionResult<List<ElaborationDTO>>> Get()
         {
-            return await context.Elaborations
-                .ProjectTo<ElaborationDTO>(mapper.ConfigurationProvider)
-                .ToListAsync();
+            return await Get<Elaboration, ElaborationDTO>();
         }
 
         [HttpGet("{id:int}")]
@@ -36,12 +39,12 @@ namespace BarServices.Controllers
                 .Include(e => e.Products)
                 .FirstOrDefaultAsync(e => e.Id == id);
             if(elaboration is null) { return NotFound(); }
-
             return mapper.Map<ElaborationDTOWithProducts>(elaboration);
         }
 
         [HttpGet("{id:int}/products")]
-        public async Task<ActionResult<List<ProductDTO>>> GetProducts(int id, int lastId, int amount)
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "ADMIN,COOK")]
+        public async Task<ActionResult<List<ProductDTO>>> GetProducts(int id, int lastId = 1, int amount = 5)
         {
             return await context.Products
                 .OrderBy(p => p.OrderTime).ThenBy(p => p.Id)
